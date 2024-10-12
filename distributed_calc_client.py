@@ -8,6 +8,8 @@ PORT_INDEX = 1
 
 SEARCH_TOOL = f"D:\\Cyber\\OS\\md5_crack\\C\\search.exe"
 
+target = ''
+
 found = False
 answer = None
 
@@ -29,11 +31,32 @@ class Client:
         except:
             protocol.ErrorMsg.connection_failed(self.server_ip, self.port)
             exit(1)
-        
 
-    def get_ranges(self):
+    def handle_server_response(self, response: list[str]):
+
+        global target
+
+        print(response)
+
+        code = response[0]
+        args = response[1:]
+
+        if code == protocol.TARGET:
+            return args[0]
+
+        if code == protocol.TASK:
+            return args[2], args[3]
+
+    def get_target(self, cpu_num, load_precent):
+        protocol.send(self.sock, protocol.build_msg_protocol(protocol.GET_TARGET, cpu_num, load_precent))
+        return self.handle_server_response(protocol.recv(self.sock))
+
+
+    def get_ranges(self, ):
         """Gets list ranges (portions) from server."""
-        pass
+        
+        protocol.send(protocol.build_msg_protocol(protocol.GET_WORK))
+        
 
 
 def check_range(target: str, range: tuple[int, int]):
@@ -59,11 +82,12 @@ def check_output(processes: list[subprocess.Popen]):
             return
 
 
-def main(server_ip=None, port=None, cpu_num=None, load_precent=None):
+def main(server_ip, port, cpu_num, load_precent):
     
-    # client = Client(server_ip, int(port))
-    
-    target = "A3FBF22F45DE932EC059D955F3228EB2"
+    client = Client(server_ip, int(port))
+    target = client.get_target(cpu_num, load_precent)
+    print(f"Got target: '{target}'")
+
 
     # list of ranges for each task (portion)
     tasks = [(0, 999999), (1000000, 1999999)]
@@ -86,8 +110,7 @@ def main(server_ip=None, port=None, cpu_num=None, load_precent=None):
     print("Result: " + answer.decode())
 
 if __name__ == "__main__":
-    main()
-    # if len(sys.argv) < 5:
-    #     print("Arguments not passed correctly. Should be like so:\npython distributed_calc_client.py <server_ip> <server_port> <number of cpu> <load percent>")
-    # else:
-    #     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    if len(sys.argv) < 5:
+        print("Arguments not passed correctly. Should be like so:\npython distributed_calc_client.py <server_ip> <server_port> <number of cpu> <load percent>")
+    else:
+        main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
