@@ -1,25 +1,34 @@
 import socket
 
+DEBUG = True
+
 # MSG CODES
 GET_TARGET = 'GETT'
 TARGET = 'TRGT'
 GET_TASK = 'WORK'
 TASK = 'TASK'
 
+IN = 0
+OUT = 1
 
 def recv(sock: socket.socket, size=1024):
 
-    _len = sock.recv(4)
-    data = sock.recv(int(_len))
+    _len = int(sock.recv(4).decode())
+    data = sock.recv(_len)
+    if DEBUG:
+        print(f"<<<{str(_len).zfill(4)}~{data.decode()}")
     return data.decode().split('~')[1:]
 
 
 def send(sock: socket.socket, to_send=b''):
-    
+
     if type(to_send) != bytes:
         to_send = to_send.encode()
 
     sock.send(to_send)
+
+    if DEBUG:
+        print(f">>>{to_send.decode()}")
 
 
 def build_msg_protocol(code, *args):

@@ -45,18 +45,19 @@ class Client:
             return args[0]
 
         if code == protocol.TASK:
-            return args[2], args[3]
+            return args[0], args[1]
 
     def get_target(self, cpu_num, load_precent):
         protocol.send(self.sock, protocol.build_msg_protocol(protocol.GET_TARGET, cpu_num, load_precent))
         return self.handle_server_response(protocol.recv(self.sock))
 
-
-    def get_ranges(self, ):
+    def get_ranges(self) -> list[tuple]:
         """Gets list ranges (portions) from server."""
         
-        protocol.send(protocol.build_msg_protocol(protocol.GET_WORK))
-        
+        protocol.send(self.sock, protocol.build_msg_protocol(protocol.GET_TASK))
+        portion_size, portion_starts = self.handle_server_response(protocol.recv(self.sock))
+        portion_size = int(portion_size)
+        return [(start, start+portion_size-1) for start in eval(portion_starts)]
 
 
 def check_range(target: str, range: tuple[int, int]):
@@ -75,7 +76,7 @@ def check_output(processes: list[subprocess.Popen]):
     global found, answer
 
     for p in processes:
-        output, _ = p.communicate()
+        output = p.stdout.readline()
         if b"Found" in output:
             answer = output.replace(b'Found!', b'').strip()
             found = True
@@ -83,14 +84,22 @@ def check_output(processes: list[subprocess.Popen]):
 
 
 def main(server_ip, port, cpu_num, load_precent):
-    
+    """
+    Client main:
+    1. Get target - MD5 hash to find
+    2. Get ranges of numbers to work on
+    3. Go through ranges - divide work to multiprocessing
+    """
+
     client = Client(server_ip, int(port))
+
+    # Get target from server
     target = client.get_target(cpu_num, load_precent)
     print(f"Got target: '{target}'")
 
-
     # list of ranges for each task (portion)
-    tasks = [(0, 999999), (1000000, 1999999)]
+    tasks = client.get_ranges()
+    print(f"Tasks: {tasks}")
     
     processes = []
 
@@ -98,11 +107,8 @@ def main(server_ip, port, cpu_num, load_precent):
         p = subprocess.Popen(f"{SEARCH_TOOL} {target} {task[0]} {task[1]}", stdout=subprocess.PIPE)
         processes.append(p)
     
-    while not found:
-        
-        check_output(processes)
-
-
+    print("Processes running...")
+    
     while not found:
         check_output(processes)
     

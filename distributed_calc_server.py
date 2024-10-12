@@ -4,6 +4,14 @@ import protocol
 IP = "127.0.0.1"
 PORT = 1234
 
+MAX_OPTION = 9999999999
+PORTION_SIZE = 1000000
+
+# Clients tid dict keys
+CPU_NUM = 'cpu_num'
+LOAD_PRECENT = 'load_precent'
+PORTIONS = 'portions'
+
 target = ''
 all_to_die = False
 found = False
@@ -13,14 +21,30 @@ class Server:
         self.max_clients: int = max_clients
         self.server_sock: socket.socket = None
         self.clients_connected = 0
-        self.clients = []
+        self.clients: dict[int, dict[str, int]] = {}  # {tid : {cpu_num: 2, load_precent: 75}}
+        self.starts_covered = []
+        self.ranges = self.__ranges()
 
     def initialize_connection(self) -> None:
         self.server_sock = socket.socket()
         self.server_sock.bind((IP, PORT))
         self.server_sock.listen(20)
 
-    def handle_request(self, request: list[str]):
+    def __ranges(self):
+        while True:
+            _next = len(self.starts_covered) * PORTION_SIZE
+            if _next > MAX_OPTION:
+                break
+            self.starts_covered.append(_next)
+            yield _next
+
+    def calc_portions_num(cpu_num, load_precent):
+        return cpu_num * (load_precent) // 100 * 2
+
+    def get_ranges(self, tid):
+        return [str(next(self.ranges)) for i in range(self.clients[tid][PORTIONS])]
+
+    def handle_request(self, request: list[str], tid=None):
         
         global target
 
@@ -28,7 +52,10 @@ class Server:
         args = request[1:]
 
         if code == protocol.GET_TARGET:
+            self.clients[tid] = {CPU_NUM: int(args[0]), LOAD_PRECENT: int(args[1]), PORTIONS: Server.calc_portions_num(int(args[0]), int(args[1]))}
             return protocol.build_msg_protocol(protocol.TARGET, target)
+        elif code == protocol.GET_TASK:
+            return protocol.build_msg_protocol(protocol.TASK, PORTION_SIZE, f"({','.join(self.get_ranges(tid))})")
 
         return ''
             
