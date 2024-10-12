@@ -3,8 +3,8 @@ __Author__ = "OphirH"
 import sys, subprocess
 import socket, protocol
 
-IP = 0
-PORT = 1
+IP_INDEX = 0
+PORT_INDEX = 1
 
 SEARCH_TOOL = f"D:\\Cyber\\OS\\md5_crack\\C\\search.exe"
 
