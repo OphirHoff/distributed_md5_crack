@@ -1,4 +1,4 @@
-import sys, socket, threading
+import sys, socket, threading, time
 import protocol
 
 IP = "0.0.0.0"
@@ -26,6 +26,10 @@ class Server:
         self.clients: dict[int, dict[str, int]] = {}  # {tid : {sock: <client_sock>, cpu_num: 2, load_precent: 75}}
         self.starts_covered = []
         self.ranges = self.__ranges()
+
+        # To count total crack time
+        self.t1 = None
+        self.t2 = None
 
     def initialize_connection(self) -> None:
         self.server_sock = socket.socket()
@@ -77,6 +81,7 @@ class Server:
                 return protocol.build_msg_protocol(protocol.TASK, PORTION_SIZE, f"({','.join(self.get_ranges(portions_num=int(args[0])))})")
             return protocol.build_msg_protocol(protocol.TASK, PORTION_SIZE, f"({','.join(self.get_ranges(tid=tid))})")
         elif code == protocol.FOUND:
+            self.t2 = time.time()
             found = True
             answer = args[0]
             
@@ -112,6 +117,8 @@ class Server:
             if len(threads) < self.max_clients:
                 try:
                     client_sock, address = self.server_sock.accept()
+                    if not self.t1:
+                        self.t1 = time.time()
                     t = threading.Thread(target=self.handle_client, args=(client_sock, self.clients_connected, address))
                     t.start()
                     self.clients
@@ -127,7 +134,9 @@ class Server:
         print(f"""
 ###############################################
             FOUND!
-    The password is: {answer}
+    The password is: {answer.decode()}
+
+    Crack time: {self.t2 - self.t2} sec.
 ###############################################
             """)
 
