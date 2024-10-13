@@ -2,11 +2,16 @@ import socket
 
 DEBUG = True
 
-# MSG CODES
+### MSG CODES ###
+# client ---> server #
 GET_TARGET = 'GETT'
-TARGET = 'TRGT'
 GET_TASK = 'WORK'
+FOUND = 'DONE'
+# server ---> client #
+TARGET = 'TRGT'
 TASK = 'TASK'
+DISCONNECT = 'EXIT'
+
 
 IN = 0
 OUT = 1
@@ -16,7 +21,7 @@ def recv(sock: socket.socket, size=1024):
     _len = int(sock.recv(4).decode())
     data = sock.recv(_len)
     if DEBUG:
-        print(f"<<<{str(_len).zfill(4)}~{data.decode()}")
+        print(f"<<<{str(_len).zfill(4)}{data.decode()}")
     return data.decode().split('~')[1:]
 
 

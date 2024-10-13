@@ -36,8 +36,6 @@ class Client:
 
         global target
 
-        print(response)
-
         code = response[0]
         args = response[1:]
 
@@ -51,24 +49,22 @@ class Client:
         protocol.send(self.sock, protocol.build_msg_protocol(protocol.GET_TARGET, cpu_num, load_precent))
         return self.handle_server_response(protocol.recv(self.sock))
 
-    def get_ranges(self) -> list[tuple]:
+    def get_ranges(self, portions_num: int | None = '') -> list[tuple]:
         """Gets list ranges (portions) from server."""
-        
-        protocol.send(self.sock, protocol.build_msg_protocol(protocol.GET_TASK))
+        protocol.send(self.sock, protocol.build_msg_protocol(protocol.GET_TASK, portions_num))
         portion_size, portion_starts = self.handle_server_response(protocol.recv(self.sock))
         portion_size = int(portion_size)
-        return [(start, start+portion_size-1) for start in eval(portion_starts)]
+        ev = eval(portion_starts)
+        if type(ev) == tuple:
+            return [(start, start+portion_size-1) for start in ev]
+        return [(start, start+portion_size-1) for start in range(ev)]
+
+    def notify_find(self, answer: str) -> None:
+        protocol.send(self.sock, protocol.build_msg_protocol(protocol.FOUND, answer))
 
 
 def check_range(target: str, range: tuple[int, int]):
-    
-    global found, answer
-
-    print("Started")
-    result = md5(target, range[0], range[1])
-    if "Found" in result:
-        answer = result.replace('Found!', '').strip()
-        found = True
+    return subprocess.Popen(f"{SEARCH_TOOL} {target} {range[0]} {range[1]}", stdout=subprocess.PIPE)
         
 
 def check_output(processes: list[subprocess.Popen]):
@@ -76,11 +72,17 @@ def check_output(processes: list[subprocess.Popen]):
     global found, answer
 
     for p in processes:
+        if p.poll():
+            processes.remove(p)
+            print("check")
+            return False
+
         output = p.stdout.readline()
+        print(output)
         if b"Found" in output:
             answer = output.replace(b'Found!', b'').strip()
             found = True
-            return
+            return True
 
 
 def main(server_ip, port, cpu_num, load_precent):
@@ -104,15 +106,21 @@ def main(server_ip, port, cpu_num, load_precent):
     processes = []
 
     for task in tasks:
-        p = subprocess.Popen(f"{SEARCH_TOOL} {target} {task[0]} {task[1]}", stdout=subprocess.PIPE)
+        p = check_range(target, task)
         processes.append(p)
     
     print("Processes running...")
     
-    while not found:
-        check_output(processes)
-    
-    
+    while True:
+        result = check_output(processes)
+        if not result:
+            task = client.get_ranges(portions_num=1)
+            if task:
+                processes.append(check_range(target, task))
+            
+        if found:
+            client.notify_find(answer)
+
     print("Result: " + answer.decode())
 
 if __name__ == "__main__":

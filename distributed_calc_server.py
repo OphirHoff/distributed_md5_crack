@@ -11,17 +11,19 @@ PORTION_SIZE = 1000000
 CPU_NUM = 'cpu_num'
 LOAD_PRECENT = 'load_precent'
 PORTIONS = 'portions'
+SOCK = 'sock'
 
 target = ''
 all_to_die = False
 found = False
+answer = ''
 
 class Server:
     def __init__(self, max_clients=20) -> None:
         self.max_clients: int = max_clients
         self.server_sock: socket.socket = None
         self.clients_connected = 0
-        self.clients: dict[int, dict[str, int]] = {}  # {tid : {cpu_num: 2, load_precent: 75}}
+        self.clients: dict[int, dict[str, int]] = {}  # {tid : {sock: <client_sock>, cpu_num: 2, load_precent: 75}}
         self.starts_covered = []
         self.ranges = self.__ranges()
 
@@ -29,6 +31,8 @@ class Server:
         self.server_sock = socket.socket()
         self.server_sock.bind((IP, PORT))
         self.server_sock.listen(20)
+        self.server_sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        self.server_sock.settimeout(0.1)
 
     def __ranges(self):
         while True:
@@ -41,36 +45,59 @@ class Server:
     def calc_portions_num(cpu_num, load_precent):
         return cpu_num * (load_precent) // 100 * 2
 
-    def get_ranges(self, tid):
+    def get_ranges(self, tid=None, portions_num=None):
+        if portions_num:
+            return [str(next(self.ranges)) for i in range(portions_num)]
         return [str(next(self.ranges)) for i in range(self.clients[tid][PORTIONS])]
+
+    def notify_found(self, tid):
+        to_send = protocol.build_msg_protocol(protocol.DISCONNECT)
+        protocol.send(self.clients[tid][SOCK], to_send)
+
+    def notify_all_found(self):
+        for client in self.clients.items():
+            self.notify_found(client[0])
 
     def handle_request(self, request: list[str], tid=None):
         
-        global target
+        global target, found, answer
 
         code = request[0]
         args = request[1:]
 
         if code == protocol.GET_TARGET:
-            self.clients[tid] = {CPU_NUM: int(args[0]), LOAD_PRECENT: int(args[1]), PORTIONS: Server.calc_portions_num(int(args[0]), int(args[1]))}
+            # self.clients[tid] = {CPU_NUM: int(args[0]), LOAD_PRECENT: int(args[1]), PORTIONS: Server.calc_portions_num(int(args[0]), int(args[1]))}
+            self.clients[tid][CPU_NUM] = int(args[0])
+            self.clients[tid][LOAD_PRECENT] = int(args[1])
+            self.clients[tid][PORTIONS] = Server.calc_portions_num(int(args[0]), int(args[1]))
             return protocol.build_msg_protocol(protocol.TARGET, target)
         elif code == protocol.GET_TASK:
-            return protocol.build_msg_protocol(protocol.TASK, PORTION_SIZE, f"({','.join(self.get_ranges(tid))})")
-
+            if args[0]:
+                return protocol.build_msg_protocol(protocol.TASK, PORTION_SIZE, f"({','.join(self.get_ranges(portions_num=int(args[0])))})")
+            return protocol.build_msg_protocol(protocol.TASK, PORTION_SIZE, f"({','.join(self.get_ranges(tid=tid))})")
+        elif code == protocol.FOUND:
+            found = True
+            answer = args[0]
+            
         return ''
             
 
     def handle_client(self, sock, tid, address):
         
-        while True:
+        global found, all_to_die
+
+        while not all_to_die:
 
             client_request = protocol.recv(sock)
-            print(client_request, type(client_request))
-            to_send = self.handle_request(client_request)
+            to_send = self.handle_request(client_request, tid)
 
             if to_send != '':
                 protocol.send(sock, to_send)
             
+            if found:
+                all_to_die = True
+                self.notify_found(tid)
+                break
 
 
     def main(self):
@@ -82,14 +109,26 @@ class Server:
 
         while True:
             if len(threads) < self.max_clients:
-                client_sock, address = self.server_sock.accept()
-                t = threading.Thread(target=self.handle_client, args=(client_sock, self.clients_connected, address))
-                t.start()
-                self.clients_connected += 1
-                threads.append(t)
+                try:
+                    client_sock, address = self.server_sock.accept()
+                    t = threading.Thread(target=self.handle_client, args=(client_sock, self.clients_connected, address))
+                    t.start()
+                    self.clients
+                    self.clients[self.clients_connected] = {SOCK: client_sock}
+                    self.clients_connected += 1
+                    threads.append(t)
+                except socket.timeout:
+                    pass
             if found:
                 break
             
+        print(f"""
+###############################################
+            FOUND!
+    The password is: {answer}
+###############################################
+            """)
+
         print('Main thread: waiting for all clients to die')
         for t in threads:
             t.join()
