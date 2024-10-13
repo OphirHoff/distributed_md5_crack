@@ -124,8 +124,7 @@ def main(server_ip, port, cpu_num, load_precent):
     print("Result: " + answer.decode())
 
 if __name__ == "__main__":
-    print(SEARCH_TOOL)
-    # if len(sys.argv) < 5:
-    #     print("Arguments not passed correctly. Should be like so:\npython distributed_calc_client.py <server_ip> <server_port> <number of cpu> <load percent>")
-    # else:
-    #     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    if len(sys.argv) < 5:
+        print("Arguments not passed correctly. Should be like so:\npython distributed_calc_client.py <server_ip> <server_port> <number of cpu> <load percent>")
+    else:
+        main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
