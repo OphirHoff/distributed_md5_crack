@@ -58,14 +58,16 @@ class Client:
         ev = eval(portion_starts)
         if type(ev) == tuple:
             return [(start, start+portion_size-1) for start in ev]
-        return [(start, start+portion_size-1) for start in range(ev)]
+        # return [(start, start+portion_size-1) for start in range(ev)]
+        return [(ev, ev+portion_size-1)]
 
     def notify_find(self, answer: str) -> None:
         protocol.send(self.sock, protocol.build_msg_protocol(protocol.FOUND, answer))
 
 
-def check_range(target: str, range: tuple[int, int]):
-    return subprocess.Popen(f"{SEARCH_TOOL} {target} {range[0]} {range[1]}", stdout=subprocess.PIPE, shell=True)
+def check_range(target: str, r: tuple[int, int]):
+    print(type(r))
+    return subprocess.Popen(f"{SEARCH_TOOL} {target} {r[0]} {r[1]}", stdout=subprocess.PIPE, shell=True)
         
 
 def check_output(processes: list[subprocess.Popen]):
@@ -73,16 +75,18 @@ def check_output(processes: list[subprocess.Popen]):
     global found, answer
 
     for p in processes:
-        if p.poll():
-            processes.remove(p)
-            print("check")
-            return False
 
         output = p.stdout.readline()
+        print(output)
         if b"Found" in output:
             answer = output.replace(b'Found!', b'').strip()
             found = True
             return True
+
+        if p.poll() is not None:
+            processes.remove(p)
+            print("check")
+            return False
 
 
 def main(server_ip, port, cpu_num, load_precent):
@@ -114,7 +118,7 @@ def main(server_ip, port, cpu_num, load_precent):
     while True:
         result = check_output(processes)
         if not result:
-            task = client.get_ranges(portions_num=1)
+            task = client.get_ranges(portions_num=1)[0]
             if task:
                 processes.append(check_range(target, task))
             
