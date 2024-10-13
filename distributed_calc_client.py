@@ -64,7 +64,7 @@ class Client:
 
 
 def check_range(target: str, range: tuple[int, int]):
-    return subprocess.Popen(f"{SEARCH_TOOL} {target} {range[0]} {range[1]}", stdout=subprocess.PIPE)
+    return subprocess.Popen(f"{SEARCH_TOOL} {target} {range[0]} {range[1]}", stdout=subprocess.PIPE, shell=True)
         
 
 def check_output(processes: list[subprocess.Popen]):
@@ -78,7 +78,6 @@ def check_output(processes: list[subprocess.Popen]):
             return False
 
         output = p.stdout.readline()
-        print(output)
         if b"Found" in output:
             answer = output.replace(b'Found!', b'').strip()
             found = True
