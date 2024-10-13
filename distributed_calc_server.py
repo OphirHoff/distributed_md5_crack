@@ -1,7 +1,7 @@
 import sys, socket, threading
 import protocol
 
-IP = "127.0.0.1"
+IP = "0.0.0.0"
 PORT = 1234
 
 MAX_OPTION = 9999999999
