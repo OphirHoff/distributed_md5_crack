@@ -66,18 +66,24 @@ class Client:
 
 
 def check_range(target: str, r: tuple[int, int]):
-    print(type(r))
     return subprocess.Popen(f"{SEARCH_TOOL} {target} {r[0]} {r[1]}", stdout=subprocess.PIPE, shell=True)
         
 
-def check_output(processes: list[subprocess.Popen]):
-
+def check_output(processes: list[subprocess.Popen]) -> bool | None:
     global found, answer
+    """
+    Iterate through processes:
+    1. Check output to determine if answer was found
+    2. Remove process from list if finished with no result
 
+    RETURN:
+    True -> Found answer
+    False -> Process finished and died
+    None -> Neither
+    """
     for p in processes:
 
         output = p.stdout.readline()
-        print(output)
         if b"Found" in output:
             answer = output.replace(b'Found!', b'').strip()
             found = True
@@ -85,7 +91,6 @@ def check_output(processes: list[subprocess.Popen]):
 
         if p.poll() is not None:
             processes.remove(p)
-            print("check")
             return False
 
 
@@ -112,13 +117,14 @@ def main(server_ip, port, cpu_num, load_precent):
     for task in tasks:
         p = check_range(target, task)
         processes.append(p)
-    
+
     print("Processes running...")
     
     while True:
         result = check_output(processes)
-        if not result:
-            task = client.get_ranges(portions_num=1)[0]
+
+        if result == False:  
+            task = client.get_ranges(portions_num=1)[0]  # ask for more work
             if task:
                 processes.append(check_range(target, task))
             

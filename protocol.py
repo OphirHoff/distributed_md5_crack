@@ -1,6 +1,6 @@
 import socket
 
-DEBUG = True
+DEBUG = False
 
 ### MSG CODES ###
 # client ---> server #

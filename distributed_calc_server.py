@@ -43,7 +43,7 @@ class Server:
             yield _next
 
     def calc_portions_num(cpu_num, load_precent):
-        return cpu_num * (load_precent) // 100 * 2
+        return cpu_num * load_precent // 100 * 2
 
     def get_ranges(self, tid=None, portions_num=None):
         if portions_num:
@@ -67,6 +67,7 @@ class Server:
 
         if code == protocol.GET_TARGET:
             # self.clients[tid] = {CPU_NUM: int(args[0]), LOAD_PRECENT: int(args[1]), PORTIONS: Server.calc_portions_num(int(args[0]), int(args[1]))}
+            print(self.clients)
             self.clients[tid][CPU_NUM] = int(args[0])
             self.clients[tid][LOAD_PRECENT] = int(args[1])
             self.clients[tid][PORTIONS] = Server.calc_portions_num(int(args[0]), int(args[1]))
@@ -89,7 +90,7 @@ class Server:
         while not all_to_die:
 
             client_request = protocol.recv(sock)
-            to_send = self.handle_request(client_request, tid)
+            to_send = self.handle_request(client_request, tid=tid)
 
             if to_send != '':
                 protocol.send(sock, to_send)
@@ -115,6 +116,7 @@ class Server:
                     t.start()
                     self.clients
                     self.clients[self.clients_connected] = {SOCK: client_sock}
+                    print(self.clients)
                     self.clients_connected += 1
                     threads.append(t)
                 except socket.timeout:
