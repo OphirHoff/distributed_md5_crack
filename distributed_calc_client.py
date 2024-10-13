@@ -1,12 +1,13 @@
 __Author__ = "OphirH"
 
-import sys, subprocess
+import sys, subprocess, os
 import socket, protocol
 
 IP_INDEX = 0
 PORT_INDEX = 1
 
-SEARCH_TOOL = f"D:\\Cyber\\OS\\md5_crack\\C\\search.exe"
+# SEARCH_TOOL = f"D:\\Cyber\\OS\\md5_crack\\C\\search.exe"
+SEARCH_TOOL = f"{os.path.dirname(os.path.abspath(__file__))}\\C\\search.exe"
 
 target = ''
 
@@ -123,7 +124,8 @@ def main(server_ip, port, cpu_num, load_precent):
     print("Result: " + answer.decode())
 
 if __name__ == "__main__":
-    if len(sys.argv) < 5:
-        print("Arguments not passed correctly. Should be like so:\npython distributed_calc_client.py <server_ip> <server_port> <number of cpu> <load percent>")
-    else:
-        main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
+    print(SEARCH_TOOL)
+    # if len(sys.argv) < 5:
+    #     print("Arguments not passed correctly. Should be like so:\npython distributed_calc_client.py <server_ip> <server_port> <number of cpu> <load percent>")
+    # else:
+    #     main(sys.argv[1], sys.argv[2], sys.argv[3], sys.argv[4])
