@@ -1,4 +1,7 @@
-import sys, socket, threading, time
+__author__ = "OphirH YB-3"
+
+import os, sys, socket, threading, time
+import psutil
 import protocol
 
 IP = "0.0.0.0"
@@ -17,6 +20,9 @@ target = ''
 all_to_die = False
 found = False
 answer = ''
+
+def set_high_proirity():
+    psutil.Process(os.getpid()).nice(psutil.REALTIME_PRIORITY_CLASS)
 
 class Server:
     def __init__(self, max_clients=20) -> None:
@@ -123,7 +129,6 @@ class Server:
                     t.start()
                     self.clients
                     self.clients[self.clients_connected] = {SOCK: client_sock}
-                    print(self.clients)
                     self.clients_connected += 1
                     threads.append(t)
                 except socket.timeout:
@@ -134,9 +139,9 @@ class Server:
         print(f"""
 ###############################################
             FOUND!
-    The password is: {answer.decode()}
+    The password is: {answer}
 
-    Crack time: {self.t2 - self.t2} sec.
+    Crack time: {self.t2 - self.t1} sec.
 ###############################################
             """)
 
@@ -146,11 +151,10 @@ class Server:
         self.server_sock.close()
         print('Bye...')
 
-
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Arguments not passed correctly. Should be like so:\npython distributed_calc_server.py <MD5 Hashed Password>")
     else:
-        target = sys.argv[1]
+        target = sys.argv[1].upper()
         server = Server()
         server.main()

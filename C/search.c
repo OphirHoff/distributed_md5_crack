@@ -2,7 +2,9 @@
 #include "md5_source\md5.h"
 #include "md5_source\md5.c"
 
-#define md5_uint8_t_arr_size 16
+#define MD5_UINT8_T_ARR_SIZE 16
+#define HEX_STR_LEN 32
+#define PASS_LEN 10
 
 void zeroFill(int number, char *result) {
     // Use snprintf to format the number with leading zeros
@@ -18,17 +20,15 @@ void printMD5Hex(const uint8_t digest[16]) {
     printf("%s\n", buffer);  // Print the entire string at once
 }
 
-void hexToUint8Array(const char *hexStr, uint8_t *array, int size) {
-    size_t len = strlen(hexStr);
-    size = len / 2; // Each byte is represented by two hex characters
+void hexToUint8Array(const char *hexStr, uint8_t *array) {
 
-    for (size_t i = 0; i < size; i++) {
+    for (size_t i = 0; i < HEX_STR_LEN; i++) {
         sscanf(hexStr + 2 * i, "%2hhx", &array[i]);
     }
 }
 
-int compare(const uint8_t *arr1, const uint8_t *arr2, size_t length) {
-    return memcmp(arr1, arr2, length * sizeof(uint8_t)) == 0;
+int compare(const uint8_t *arr1, const uint8_t *arr2) {
+    return memcmp(arr1, arr2, MD5_UINT8_T_ARR_SIZE) == 0;
 }
 
 int main(int argc, char *argv[]) {
@@ -38,23 +38,24 @@ int main(int argc, char *argv[]) {
 		return 1;
 	}
 	
-	uint8_t target[md5_uint8_t_arr_size];
-	hexToUint8Array(argv[1], target, md5_uint8_t_arr_size);
+	uint8_t target[MD5_UINT8_T_ARR_SIZE];
+	hexToUint8Array(argv[1], target);
 	int rangeStart = atoi(argv[2]);
 	int rangeEnd = atoi(argv[3]);
 	
-	int i;
-	for(i = rangeStart; i <= rangeEnd; i++) {
-		
-		uint8_t curr[md5_uint8_t_arr_size];
-		char curr_num[11];
+	uint8_t curr[MD5_UINT8_T_ARR_SIZE];
+	char curr_num[PASS_LEN];
+	
+	for(int i = rangeStart; i <= rangeEnd; i++) {
 		zeroFill(i, curr_num);
 		md5String(curr_num, curr);
 
-		if (compare(curr, target, md5_uint8_t_arr_size)) {
-			printf("Found! %s\n", curr_num);
-			break;
+		if (compare(curr, target)) {
+			printf("%d", i);  // Output the found number
+			return 0;
 		}
 	}
+	// If not found, print X
+	printf("X");
 	return 0;
 }

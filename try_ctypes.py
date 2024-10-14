@@ -1,17 +1,28 @@
-__author__ = "OphirH YB-3"
+__Author__ = "OphirH"
 
-import sys, subprocess, os
+import sys, subprocess, os, ctypes
 import socket, protocol
+from multiprocessing import Process, Queue, Array
 
 IP_INDEX = 0
 PORT_INDEX = 1
 
-SEARCH_TOOL = ".\\C\\search.exe"
-
-target = ''
+MD5_UINT8_T_ARR_SIZE = 32
+search_lib = ctypes.CDLL('./C/search.dll')
+# search_lib.searchRange.argtypes = [ctypes.c_char_p, ctypes.c_int, ctypes.c_int]
+# target = ''
+search_lib.searchRange.argtypes = [ctypes.POINTER(ctypes.c_uint8), ctypes.c_int, ctypes.c_int]
+target_uint8_t = Array(ctypes.c_uint8, MD5_UINT8_T_ARR_SIZE)
 
 found = False
 answer = None
+
+
+def set_target(t: bytes):
+
+    for i in range(len(target_uint8_t)):
+        target_uint8_t[i] = t[i]
+
 
 class Client:
     def __init__(self, server_ip, port) -> None:
@@ -31,7 +42,7 @@ class Client:
 
     def handle_server_response(self, response: list[str]):
 
-        global target
+        global _target
 
         code = response[0]
         args = response[1:]
@@ -60,36 +71,18 @@ class Client:
         protocol.send(self.sock, protocol.build_msg_protocol(protocol.FOUND, answer))
 
 
-def check_range(target: str, r: tuple[int, int]):
-    return subprocess.Popen(f"{SEARCH_TOOL} {target} {r[0]} {r[1]}", stdout=subprocess.PIPE)
-        
+def check_range(q: Queue, r: tuple[int, int], target):
+    result = search_lib.searchRange(target.get_obj(), r[0], r[1])
+    q.put(result)
 
-def check_output(processes: list[subprocess.Popen]) -> bool | None:
-    global found, answer
-    """
-    Iterate through processes:
-    1. Check output to determine if answer was found
-    2. Remove process from list if finished with no result
 
-    RETURN:
-    True -> Found answer
-    False -> Process finished and died
-    None -> Neither
-    """
-    for p in processes:
-
-        output: bytes = p.stdout.readline()
-        if output and output != b'X':
-            answer = output.decode()
-            found = True
-            return True
-
-        if p.poll() is not None:
-            processes.remove(p)
-            return False
+def start_process(task, results, target):
+    p = Process(target=check_range, args=(results, task, target))
+    p.start()
 
 
 def main(server_ip, port, cpu_num, load_precent):
+    global found, answer, target_uint8_t
     """
     Client main:
     1 Get target - MD5 hash to find
@@ -100,33 +93,38 @@ def main(server_ip, port, cpu_num, load_precent):
     client = Client(server_ip, int(port))
 
     # Get target from server
-    target = client.get_target(cpu_num, load_precent)
+    target = client.get_target(cpu_num, load_precent).encode()
+    
     print(f"Got target: '{target}'")
+
+    set_target(target)
 
     # list of ranges for each task (portion)
     tasks = client.get_ranges()
     print(f"Tasks: {tasks}")
     
-    processes = []
+    results = Queue()
 
     for task in tasks:
-        p = check_range(target, task)
-        processes.append(p)
+        start_process(task, results, target_uint8_t)
 
     print("Processes running...")
     
     while True:
-        result = check_output(processes)
+        
+        output = results.get()
+        if output == -1:
+            task = client.get_ranges(portions_num=1)[0]
+            start_process(task, results, target_uint8_t)
+        else:
+            answer = str(output).zfill(10)
+            found = True
 
-        if result == False:  
-            task = client.get_ranges(portions_num=1)[0]  # ask for more work
-            if task:
-                processes.append(check_range(target, task))
-            
         if found:
             client.notify_find(answer)
+            break
 
-    print("Result: " + answer.decode())
+    print("Result: " + answer)
 
 if __name__ == "__main__":
     if len(sys.argv) < 5:
