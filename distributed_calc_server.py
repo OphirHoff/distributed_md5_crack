@@ -8,7 +8,7 @@ IP = "0.0.0.0"
 PORT = 1234
 
 MAX_OPTION = 9999999999
-PORTION_SIZE = 100000
+PORTION_SIZE = 10000000
 
 # Clients tid dict keys
 CPU_NUM = 'cpu_num'
