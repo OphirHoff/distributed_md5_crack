@@ -76,8 +76,6 @@ class Server:
         args = request[1:]
 
         if code == protocol.GET_TARGET:
-            # self.clients[tid] = {CPU_NUM: int(args[0]), LOAD_PRECENT: int(args[1]), PORTIONS: Server.calc_portions_num(int(args[0]), int(args[1]))}
-            print(self.clients)
             self.clients[tid][CPU_NUM] = int(args[0])
             self.clients[tid][LOAD_PRECENT] = int(args[1])
             self.clients[tid][PORTIONS] = Server.calc_portions_num(int(args[0]), int(args[1]))
@@ -126,11 +124,13 @@ class Server:
                     if not self.t1:
                         self.t1 = time.time()
                     t = threading.Thread(target=self.handle_client, args=(client_sock, self.clients_connected, address))
-                    t.start()
-                    self.clients
                     self.clients[self.clients_connected] = {SOCK: client_sock}
+                    t.start()
+                    
+                    print(f"Main Thread: New Client connected {address} tid={self.clients_connected}")
                     self.clients_connected += 1
                     threads.append(t)
+                    
                 except socket.timeout:
                     pass
             if found:
@@ -138,10 +138,10 @@ class Server:
             
         print(f"""
 ###############################################
-            FOUND!
-    The password is: {answer}
+                    FOUND!
+          The password is: {answer.zfill(10)}
 
-    Crack time: {self.t2 - self.t1} sec.
+           Crack time: {round(self.t2 - self.t1, 3)} sec.
 ###############################################
             """)
 
