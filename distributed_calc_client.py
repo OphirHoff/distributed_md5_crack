@@ -118,6 +118,7 @@ def main(server_ip, port, cpu_num, load_precent):
     while True:
         result = check_output(processes)
 
+
         if result == False:  
             task = client.get_ranges(portions_num=1)[0]  # ask for more work
             if task:
