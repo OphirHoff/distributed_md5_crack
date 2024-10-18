@@ -6,9 +6,22 @@
 #define HEX_STR_LEN 32
 #define PASS_LEN 10
 
-void zeroFill(int number, char *result) {
+long long stoi(char *number)
+{
+    long long num = 0;
+    
+    while (*number)
+    {
+        num = num * 10 + *number - '0';
+        number++;
+    }
+    
+    return num;
+}
+
+void zeroFill(long long number, char *result) {
     // Use snprintf to format the number with leading zeros
-    snprintf(result, 11, "%010d", number); // 10 digits, padded with zeros
+    snprintf(result, 11, "%010lld", number); // 10 digits, padded with zeros
 }
 
 void printMD5Hex(const uint8_t digest[16]) {
@@ -40,18 +53,19 @@ int main(int argc, char *argv[]) {
 	
 	uint8_t target[MD5_UINT8_T_ARR_SIZE];
 	hexToUint8Array(argv[1], target);
-	int rangeStart = atoi(argv[2]);
-	int rangeEnd = atoi(argv[3]);
+	long long rangeStart = stoi(argv[2]);
+	long long rangeEnd = stoi(argv[3]);
 	
 	uint8_t curr[MD5_UINT8_T_ARR_SIZE];
 	char curr_num[PASS_LEN];
 	
-	for(int i = rangeStart; i <= rangeEnd; i++) {
+	for(long long i = rangeStart; i <= rangeEnd; i++) {
+		
 		zeroFill(i, curr_num);
 		md5String(curr_num, curr);
 
 		if (compare(curr, target)) {
-			printf("%d", i);  // Output the found number
+			printf("%lld", i);  // Output the found number
 			return 0;
 		}
 	}
